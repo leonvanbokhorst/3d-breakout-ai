@@ -21,7 +21,7 @@ BEST_MODEL_SAVE_PATH = os.path.join(MODEL_SAVE_DIR, "best_model")
 EVAL_LOG_PATH = os.path.join(LOG_DIR, "eval_logs")
 MODEL_NAME = "ppo_bouncy_breakout_v1"
 TOTAL_TIMESTEPS = 100_000_000
-N_ENVS = 5
+N_ENVS = 64
 EVAL_FREQ = 100_000
 N_EVAL_EPISODES = 50
 

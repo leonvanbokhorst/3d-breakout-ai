@@ -1,5 +1,5 @@
+pygame
+gymnasium
+stable-baselines3[extra]
 torch
-PyOpenGL
-glfW
-numpy 
-PyOpenGL-accelerate 
+numpy

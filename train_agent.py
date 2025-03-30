@@ -22,7 +22,7 @@ EVAL_LOG_PATH = os.path.join(LOG_DIR, "eval_logs")
 MODEL_NAME = "ppo_bouncy_breakout_v1"
 TOTAL_TIMESTEPS = 100_000_000
 N_ENVS = 5
-EVAL_FREQ = 250_000
+EVAL_FREQ = 100_000
 N_EVAL_EPISODES = 50
 
 os.makedirs(TENSORBOARD_LOG_DIR, exist_ok=True)

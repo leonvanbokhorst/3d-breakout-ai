@@ -11,7 +11,7 @@ except ImportError as e:
 
 # --- Configuration ---
 # IMPORTANT: Use the exact path to the saved model .zip file
-MODEL_PATH = "logs/models/ppo_bouncy_breakout_v1_10000000_steps.zip"
+MODEL_PATH = "logs/models/best_model/best_model.zip"
 N_EPISODES_TO_RUN = 3  # How many games to watch the agent play
 
 # --- Load the Trained Agent ---

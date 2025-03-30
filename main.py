@@ -49,6 +49,7 @@ POGO_FLOOR_BOUNCE_DAMPING = 0.6
 POGO_MIN_FLOOR_BOUNCE = 8.0
 POGO_RECOIL_STRENGTH = 3.0
 POGO_VERTICAL_FORCE = 0.5
+POGO_MIN_Y = 150
 REWARD_BRICK_HIT = 0.2
 REWARD_BRICK_BROKEN = 5.0
 REWARD_WIN = 50.0
@@ -98,20 +99,29 @@ class BouncyBreakoutEnv(gym.Env):
             self.font = None
 
         # --- Gym Setup ---
-        # (... Action/Observation space definition ...)
-        self.action_space = spaces.Discrete(5)
+        # Reduce Action Space: 0:Left, 1:Right, 2:Nothing
+        self.action_space = spaces.Discrete(3)
+
+        # --- Observation Space ---
+        # Remove Cooldown Features
         num_core_features = 7
         num_brick_features = BRICK_ROWS * BRICK_COLS
-        num_cooldown_features = 2
-        obs_dims = num_core_features + num_brick_features + num_cooldown_features
+        # num_cooldown_features = 2 # REMOVED
+        obs_dims = (
+            num_core_features + num_brick_features
+        )  # REMOVED + num_cooldown_features
+
+        # Define bounds for core features
         core_low = np.array([0, 0, -15, -15, 0, 0, -20], dtype=np.float32)
         core_high = np.array([1, 1, 15, 15, 1, 1, 20], dtype=np.float32)
+        # Define bounds for brick features
         brick_low = np.zeros(num_brick_features, dtype=np.float32)
         brick_high = np.ones(num_brick_features, dtype=np.float32)
-        cooldown_low = np.zeros(num_cooldown_features, dtype=np.float32)
-        cooldown_high = np.ones(num_cooldown_features, dtype=np.float32)
-        low_bounds = np.concatenate((core_low, brick_low, cooldown_low))
-        high_bounds = np.concatenate((core_high, brick_high, cooldown_high))
+
+        # Concatenate bounds (without cooldowns)
+        low_bounds = np.concatenate((core_low, brick_low))
+        high_bounds = np.concatenate((core_high, brick_high))
+
         self.observation_space = spaces.Box(low_bounds, high_bounds, dtype=np.float32)
 
         # --- Rendering Setup (Conditional) ---
@@ -171,7 +181,6 @@ class BouncyBreakoutEnv(gym.Env):
     # ... (Methods now need to use self._pygame() instead of pygame directly) ...
 
     def _reset_internal_state(self):  # Reset logic
-        # ... (Reset vars) ...
         self.game_state = STATE_PLAYING
         self.frame_count = 0
         self.ball_x = 0
@@ -182,8 +191,9 @@ class BouncyBreakoutEnv(gym.Env):
         self.pogo_y = 0
         self.pogo_y_velocity = 0
         self.bricks = []
-        self.push_up_cooldown = 0
-        self.push_down_cooldown = 0
+        # --- Remove Cooldowns ---
+        # self.push_up_cooldown = 0
+        # self.push_down_cooldown = 0
 
     def _get_obs(self):  # Observation calculation (no pygame needed)
         # ... (Core Features calculation) ...
@@ -208,25 +218,8 @@ class BouncyBreakoutEnv(gym.Env):
                 brick_grid[r, c] = b["health"] / BRICK_HEALTH
         flattened_bricks = brick_grid.flatten()
 
-        # --- Cooldown Features ---
-        up_cooldown_norm = 0.0
-        if self.FORCE_COOLDOWN_DURATION > 0:
-            up_cooldown_norm = np.clip(
-                self.push_up_cooldown / self.FORCE_COOLDOWN_DURATION, 0.0, 1.0
-            )
-
-        down_cooldown_norm = 0.0
-        if self.FORCE_COOLDOWN_DURATION > 0:
-            down_cooldown_norm = np.clip(
-                self.push_down_cooldown / self.FORCE_COOLDOWN_DURATION, 0.0, 1.0
-            )
-
-        cooldown_obs = np.array(
-            [up_cooldown_norm, down_cooldown_norm], dtype=np.float32
-        )
-
-        # --- Concatenate ---
-        full_obs = np.concatenate((core_obs, flattened_bricks, cooldown_obs))
+        # --- Concatenate (without cooldowns) ---
+        full_obs = np.concatenate((core_obs, flattened_bricks))
 
         # Clip observation to defined bounds as a safeguard
         full_obs = np.clip(
@@ -282,63 +275,52 @@ class BouncyBreakoutEnv(gym.Env):
         if self.game_state != STATE_PLAYING:
             return self._get_obs(), 0.0, True, False, self._get_info()
 
-        # Initialize reward to 0.0 (no per-step penalty)
         reward = 0.0
         terminated = False
         truncated = False
-
-        # --- Record initial brick count ---
         bricks_before_step = len(self.bricks)
 
-        # --- Decrement Cooldowns ---
-        if self.push_up_cooldown > 0:
-            self.push_up_cooldown -= 1
-        if self.push_down_cooldown > 0:
-            self.push_down_cooldown -= 1
+        # --- Remove Cooldown Decrement ---
+        # if self.push_up_cooldown > 0: self.push_up_cooldown -= 1
+        # if self.push_down_cooldown > 0: self.push_down_cooldown -= 1
 
-        attempted_up_force = False
-        attempted_down_force = False
+        # --- REMOVE attempted force flags ---
+        # attempted_up_force = False
+        # attempted_down_force = False
 
-        # --- 1. Apply Action (with cooldown checks) ---
-        if action == 0:
+        # --- 1. Apply Action (Simplified: Left/Right/Nothing) ---
+        if action == 0:  # Left
             self.pogo_x -= POGO_SPEED
-        elif action == 1:
+        elif action == 1:  # Right
             self.pogo_x += POGO_SPEED
-        elif action == 2:  # Apply Up Force
-            attempted_up_force = True
-            if self.push_up_cooldown <= 0:
-                self.pogo_y_velocity -= POGO_VERTICAL_FORCE
-        elif action == 3:  # Apply Down Force
-            attempted_down_force = True
-            if self.push_down_cooldown <= 0:
-                self.pogo_y_velocity += POGO_VERTICAL_FORCE
+        # Action 2 is now Do Nothing - REMOVED Actions 2 & 3 logic
+        # elif action == 2: # Apply Up Force
+        #     attempted_up_force = True
+        #     if self.push_up_cooldown <= 0: self.pogo_y_velocity -= POGO_VERTICAL_FORCE
+        # elif action == 3: # Apply Down Force
+        #     attempted_down_force = True
+        #     if self.push_down_cooldown <= 0: self.pogo_y_velocity += POGO_VERTICAL_FORCE
 
         self.pogo_x = max(0, min(self.pogo_x, SCREEN_WIDTH - POGO_WIDTH))
         self.frame_count += 1
 
         # --- 2. Update Physics ---
-        # Wobble Timer
-        for b in self.bricks:
-            if b["is_wobbling"]:
-                b["wobble_timer"] -= 1
-            if b["wobble_timer"] <= 0:
-                b["is_wobbling"] = False
-
-        # Pogo Physics
+        # ... (Wobble Timer) ...
+        # Pogo Physics (No external forces now)
         original_pogo_y = self.pogo_y
         self.pogo_y_velocity += GRAVITY
         self.pogo_y += self.pogo_y_velocity
 
-        # Enforce Vertical Limits & Bounce / Cooldown
-        clamped_top = False
-        clamped_bottom = False
-        if self.pogo_y < POGO_MIN_FLOOR_BOUNCE:
-            self.pogo_y = POGO_MIN_FLOOR_BOUNCE
-            self.pogo_y_velocity = 0
-            clamped_top = True
+        # Enforce Vertical Limits & Bounce (NO Cooldown Trigger)
+        # clamped_top = False # Removed flag
+        # clamped_bottom = False # Removed flag
+        if self.pogo_y < POGO_MIN_Y:
+            self.pogo_y = POGO_MIN_Y
+            self.pogo_y_velocity = 3.0  # Keep downward push
+            # clamped_top = True
         elif self.pogo_y >= POGO_GROUND_Y:
             self.pogo_y = POGO_GROUND_Y
-            clamped_bottom = True
+            # clamped_bottom = True
             if self.pogo_y_velocity > 0:
                 bv = self.pogo_y_velocity * -POGO_FLOOR_BOUNCE_DAMPING
                 self.pogo_y_velocity = (
@@ -346,14 +328,9 @@ class BouncyBreakoutEnv(gym.Env):
                 )
             else:
                 self.pogo_y_velocity = 0
-        if clamped_top and attempted_up_force:
-            self.push_up_cooldown = self.FORCE_COOLDOWN_DURATION
-        if (
-            clamped_bottom
-            and attempted_down_force
-            and original_pogo_y < POGO_GROUND_Y + 1
-        ):
-            self.push_down_cooldown = self.FORCE_COOLDOWN_DURATION
+        # --- REMOVED Cooldown Trigger Logic ---
+        # if clamped_top and attempted_up_force: self.push_up_cooldown = self.FORCE_COOLDOWN_DURATION
+        # if clamped_bottom and attempted_down_force and original_pogo_y < POGO_GROUND_Y + 1: self.push_down_cooldown = self.FORCE_COOLDOWN_DURATION
 
         # Ball Movement & Decay
         self.ball_x += self.ball_speed_x

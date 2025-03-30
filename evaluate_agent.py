@@ -12,7 +12,7 @@ except ImportError as e:
 # --- Configuration ---
 # IMPORTANT: Use the exact path to the saved model .zip file
 MODEL_PATH = "logs/models/best_model/best_model.zip"
-N_EPISODES_TO_RUN = 3  # How many games to watch the agent play
+N_EPISODES_TO_RUN = 5  # How many games to watch the agent play
 
 # --- Load the Trained Agent ---
 print(f"Loading model from: {MODEL_PATH}")
